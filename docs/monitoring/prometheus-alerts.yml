@@ -1,0 +1,40 @@
+# Prometheus alert rules for File Converter (GROWTH / LAUNCH uptime).
+# Wire into Alertmanager to page on-call (see docs/monitoring/oncall.md).
+groups:
+  - name: fileconverter
+    rules:
+      - alert: FileConverterNotReady
+        expr: probe_success{job="fileconverter-ready"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "File Converter readiness probe failing"
+          description: "Blackbox probe of /ops/ready/ has failed for 2m."
+
+      - alert: FileConverterQueueBacklog
+        expr: fileconverter_queue_depth{queue="default"} > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Conversion queue backlog high"
+          description: "Queue depth exceeded FILECONVERTER_QUEUE_BACKLOG_ALERT for 5m."
+
+      - alert: FileConverterDeadLetters
+        expr: increase(fileconverter_dead_letter_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: page
+        annotations:
+          summary: "Conversion dead-letter events detected"
+          description: "At least one job exhausted retries in the last 15m."
+
+      - alert: FileConverterOutboxFailures
+        expr: fileconverter_outbox_failed_total > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox webhook delivery failures pending"
+          description: "Failed outbox events need operator review."

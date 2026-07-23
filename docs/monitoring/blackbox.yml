@@ -1,0 +1,36 @@
+# Sample Prometheus Blackbox Exporter module for external uptime/health probing.
+# Point your monitoring stack (Prometheus + Alertmanager, or an uptime service) at the
+# readiness endpoint and page a human on failure. This file is a template — the actual
+# monitor runs outside this repo.
+modules:
+  http_ready:
+    prober: http
+    timeout: 5s
+    http:
+      valid_status_codes: [200]
+      method: GET
+      fail_if_not_ssl: false
+      preferred_ip_protocol: ip4
+
+# Example Prometheus scrape (in prometheus.yml):
+#   scrape_configs:
+#     - job_name: fileconverter-ready
+#       metrics_path: /probe
+#       params:
+#         module: [http_ready]
+#       static_configs:
+#         - targets: ["https://app.example.com/ops/ready/"]
+#       relabel_configs:
+#         - source_labels: [__address__]
+#           target_label: __param_target
+#         - source_labels: [__param_target]
+#           target_label: instance
+#         - target_label: __address__
+#           replacement: blackbox-exporter:9115
+#
+# Example alert (alertmanager rule):
+#   - alert: FileConverterNotReady
+#     expr: probe_success{job="fileconverter-ready"} == 0
+#     for: 2m
+#     labels: { severity: page }
+#     annotations: { summary: "File Converter readiness failing" }
