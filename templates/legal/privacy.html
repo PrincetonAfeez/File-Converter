@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy | File Converter{% endblock %}
+
+{% block content %}
+<section class="legal">
+  <h1>Privacy Policy</h1>
+  <p><em>Template — replace with your reviewed legal copy before serving customers.</em></p>
+  <h2>What we store</h2>
+  <p>Account data (username, email) and the files you upload for conversion, plus the
+  converted outputs and job metadata.</p>
+  <h2>Retention</h2>
+  <p>Converted outputs are deleted after the configured retention window; input files are
+  purged after a job reaches a terminal state. Orphaned files are garbage-collected.</p>
+  <h2>Your rights</h2>
+  <p>You may request a copy of your data or deletion of your account and its data. Contact
+  support or use the documented data-export / account-deletion procedures.</p>
+  <h2>Subprocessors</h2>
+  <p>If a webhook endpoint is configured, conversion event metadata is sent to it. No file
+  contents are sent to third parties as part of the conversion pipeline.</p>
+</section>
+{% endblock %}

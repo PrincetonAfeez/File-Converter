@@ -1,0 +1,14 @@
+{% if workspaces|length > 1 %}
+  <form method="post" class="form-inline workspace-switcher">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="switch_workspace">
+    <label for="workspace_id">Workspace</label>
+    <select name="workspace_id" id="workspace_id" onchange="this.form.submit()">
+      {% for ws in workspaces %}
+        <option value="{{ ws.public_id }}"{% if workspace and ws.pk == workspace.pk %} selected{% endif %}>
+          {{ ws.organization.name }} / {{ ws.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+{% endif %}

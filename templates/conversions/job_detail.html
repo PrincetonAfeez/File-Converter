@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}{{ job.original_display_filename }} | File Converter{% endblock %}
+
+{% block content %}
+<section class="job-detail">
+  <div>
+    <h1>{{ job.original_display_filename }}</h1>
+    <p>{{ job.source_format|upper }} to {{ job.target_format|upper }} via {{ job.converter_name }} {{ job.converter_version }}</p>
+  </div>
+
+  {% include "conversions/partials/job_status.html" with job=job progress=progress %}
+
+  <div id="job-actions" class="actions">
+    {% include "conversions/partials/job_actions.html" %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service | File Converter{% endblock %}
+
+{% block content %}
+<section class="legal">
+  <h1>Terms of Service</h1>
+  <p><em>Template — replace with your reviewed legal copy before serving customers.</em></p>
+  <p>By creating an account or using File Converter, you agree to these terms. The service is
+  provided on a best-effort basis. You are responsible for the files you upload and for
+  ensuring you have the rights to convert them.</p>
+  <h2>Acceptable use</h2>
+  <p>Do not upload malware or content you are not authorized to process. We may suspend
+  accounts that abuse the service or exceed quotas.</p>
+  <h2>Data</h2>
+  <p>See our <a href="{% url 'privacy' %}">Privacy Policy</a> for how uploaded files and
+  account data are handled and retained.</p>
+</section>
+{% endblock %}

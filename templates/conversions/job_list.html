@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Jobs | File Converter{% endblock %}
+
+{% block content %}
+<h1>Jobs</h1>
+{% if workspace %}
+{% include "conversions/partials/workspace_switcher.html" %}
+<div class="job-list">
+  {% for job in jobs %}
+    {% include "conversions/partials/job_row.html" with job=job %}
+  {% empty %}
+    <div class="panel">
+      <p>No jobs yet.</p>
+    </div>
+  {% endfor %}
+</div>
+
+{% if page and page.paginator.num_pages > 1 %}
+  <nav class="pagination" aria-label="Job pages">
+    {% if page.has_previous %}
+      <a class="button ghost" href="?page={{ page.previous_page_number }}">Previous</a>
+    {% endif %}
+    <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}
+      <a class="button ghost" href="?page={{ page.next_page_number }}">Next</a>
+    {% endif %}
+  </nav>
+{% endif %}
+{% else %}
+<div class="panel">
+  <p>No active organization is available for your account.</p>
+</div>
+{% endif %}
+{% endblock %}

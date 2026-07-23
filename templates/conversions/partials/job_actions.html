@@ -1,0 +1,10 @@
+{% if job.output_downloadable %}
+  <a class="button primary" href="{% url 'download_job' job.public_id %}">Download</a>
+{% endif %}
+{% if not job.is_terminal %}
+  <form method="post" action="{% url 'cancel_job' job.public_id %}">
+    {% csrf_token %}
+    <button class="ghost" type="submit">Cancel</button>
+  </form>
+{% endif %}
+<a class="button ghost" href="{% url 'job_list' %}">All jobs</a>

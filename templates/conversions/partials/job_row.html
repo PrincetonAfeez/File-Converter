@@ -1,0 +1,10 @@
+<a class="job-row" href="{% url 'job_detail' job.public_id %}">
+  <span>
+    <span class="job-title">{{ job.original_display_filename }}</span>
+    <span class="job-meta">{{ job.source_format|upper }} to {{ job.target_format|upper }}</span>
+  </span>
+  <span>
+    <span class="status-pill status-{{ job.status }}">{{ job.get_status_display }}</span>
+  </span>
+  <span class="job-meta">{{ job.created_at|date:"M j, Y g:i A" }}</span>
+</a>

@@ -1,0 +1,40 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}File Converter{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'app.css' %}">
+  <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+  <script src="{% static 'app.js' %}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{% url 'dashboard' %}">File Converter</a>
+    <nav class="nav">
+      {% if user.is_authenticated %}
+        <a href="{% url 'job_list' %}">Jobs</a>
+        <form action="{% url 'logout' %}" method="post">
+          {% csrf_token %}
+          <button type="submit">Sign out</button>
+        </form>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="page">
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">
+    <a href="{% url 'terms' %}">Terms</a>
+    <a href="{% url 'privacy' %}">Privacy</a>
+  </footer>
+</body>
+</html>

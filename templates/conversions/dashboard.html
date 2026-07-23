@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | File Converter{% endblock %}
+
+{% block content %}
+<section class="dashboard">
+  {% if workspace %}
+  <div class="panel">
+    <h1>Convert files</h1>
+    <p>{{ workspace.organization.name }} / {{ workspace.name }}</p>
+    {% include "conversions/partials/workspace_switcher.html" %}
+    <form method="post" enctype="multipart/form-data" class="form-stack" data-conversion-form>
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <p>
+        {{ form.file.label_tag }}
+        {{ form.file }}
+        {{ form.file.errors }}
+      </p>
+      <p>
+        {{ form.target_format.label_tag }}
+        {{ form.target_format }}
+        {{ form.target_format.errors }}
+      </p>
+      <div id="option-fields">
+        {% for field in form.option_bound_fields %}
+          <p class="option-field" data-option-field="{{ field.name }}">
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+          </p>
+        {% endfor %}
+      </div>
+      {{ form.idempotency_key }}
+      <button class="primary" type="submit">Queue conversion</button>
+    </form>
+    {{ format_targets|json_script:"format-targets" }}
+    {{ target_options|json_script:"target-options" }}
+  </div>
+  <div>
+    <h2>Recent jobs</h2>
+    <div class="job-list">
+      {% for job in jobs %}
+        {% include "conversions/partials/job_row.html" with job=job %}
+      {% empty %}
+        <div class="panel">
+          <p>No jobs yet.</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="panel">
+    <h1>No active organization</h1>
+    <p>Your account does not belong to any active organization. Contact support for assistance.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

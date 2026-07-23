@@ -1,0 +1,29 @@
+<div
+  id="job-status"
+  class="panel"
+  data-terminal="{{ job.is_terminal|yesno:'true,false' }}"
+  {% if not job.is_terminal %}
+    hx-get="{% url 'job_status' job.public_id %}"
+    hx-trigger="every 2s"
+    hx-swap="outerHTML"
+  {% endif %}>
+  <h2>Status</h2>
+  <p><span class="status-pill status-{{ job.status }}">{{ job.get_status_display }}</span></p>
+  {% if job.progress_mode == "determinate" or progress.percent %}
+    <div class="progress" aria-label="Progress">
+      <div class="progress-bar" style="width: {{ progress.percent }}%"></div>
+    </div>
+    <p class="muted">{{ progress.percent }}% {{ progress.message|default:job.progress_message }}</p>
+  {% else %}
+    <p class="muted">{{ progress.message|default:job.progress_message|default:"Waiting for worker" }}</p>
+  {% endif %}
+  {% if job.failure_reason %}
+    <p>{{ job.failure_reason }}</p>
+  {% endif %}
+  {% if job.output_downloadable %}
+    <p><a href="{% url 'download_job' job.public_id %}">Download {{ job.output_file.original_name }}</a></p>
+  {% endif %}
+</div>
+<div id="job-actions" hx-swap-oob="true" class="actions">
+  {% include "conversions/partials/job_actions.html" %}
+</div>
