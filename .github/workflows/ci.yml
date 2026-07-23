@@ -15,7 +15,7 @@ jobs:
       CELERY_TASK_ALWAYS_EAGER: "True"
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -76,7 +76,7 @@ jobs:
       POSTGRES_PASSWORD: fileconverter
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -110,7 +110,7 @@ jobs:
       POSTGRES_PASSWORD: fileconverter
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -167,7 +167,7 @@ jobs:
       FILECONVERTER_USE_REDIS_CACHE: "True"
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
