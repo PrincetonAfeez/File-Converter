@@ -13,5 +13,5 @@ whitenoise>=6.8,<7.0
 pytest>=8.3,<10.0
 pytest-django>=4.9,<5.0
 pytest-cov>=6.0,<8.0
-ruff>=0.9,<1.0
+ruff>=0.15.22,<1.0
 sentry-sdk>=2.0,<3.0
