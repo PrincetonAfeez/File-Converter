@@ -1,0 +1,30 @@
+name: Uptime synthetic probe
+
+# Probes staging readiness every 15 minutes. Fails (pages watchers) when:
+#   - STAGING_BASE_URL secret is missing, or
+#   - /ops/ready/ is unreachable / reports unexpected degraded checks.
+# Mirror failures to PagerDuty/Opsgenie (see docs/monitoring/oncall.md).
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  probe-staging:
+    name: Probe staging readiness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Require STAGING_BASE_URL secret
+        env:
+          STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+        run: |
+          python scripts/validate_deploy_env.py --require-uptime-url
+      - name: Probe /ops/ready/
+        env:
+          STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+        run: python scripts/check_readiness.py "$STAGING_BASE_URL"

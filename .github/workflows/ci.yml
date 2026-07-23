@@ -1,0 +1,204 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Lint + tests (SQLite/eager)
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: ci-test-secret-key
+      CELERY_TASK_ALWAYS_EAGER: "True"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install system libs (libmagic)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmagic1
+      - name: Install dependencies (locked)
+        run: pip install -r requirements.lock
+      - name: Lint (ruff)
+        run: python -m ruff check .
+      - name: Migrations are in sync
+        run: python manage.py makemigrations --check --dry-run
+      - name: Django deploy checks
+        env:
+          DJANGO_DEBUG: "False"
+          DJANGO_SECRET_KEY: ci-strong-secret-key-0123456789abcdef0123456789
+          # CI has no real Sentry project; production must set SENTRY_DSN (fileconverter.E001).
+          FILECONVERTER_REQUIRE_SENTRY: "False"
+        run: python manage.py check --deploy
+      - name: Deploy env validator (Sentry required when DEBUG=False)
+        env:
+          DJANGO_DEBUG: "False"
+          SENTRY_DSN: "https://public@example.invalid/1"
+        run: python scripts/validate_deploy_env.py
+      - name: Deploy env validator rejects missing Sentry
+        env:
+          DJANGO_DEBUG: "False"
+        run: |
+          if python scripts/validate_deploy_env.py; then
+            echo "expected validate_deploy_env.py to fail without SENTRY_DSN" >&2
+            exit 1
+          fi
+      - name: Tests
+        run: python -m pytest -q
+
+  test-postgres:
+    name: Tests against PostgreSQL (real row locks)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fileconverter
+          POSTGRES_USER: fileconverter
+          POSTGRES_PASSWORD: fileconverter
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fileconverter"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: ci-test-secret-key
+      CELERY_TASK_ALWAYS_EAGER: "True"
+      DATABASE_URL: postgres://fileconverter:fileconverter@localhost:5432/fileconverter
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: fileconverter
+      POSTGRES_USER: fileconverter
+      POSTGRES_PASSWORD: fileconverter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmagic1
+      - run: pip install -r requirements.lock psycopg[binary]
+      - name: Tests on PostgreSQL
+        run: python -m pytest -q
+
+  restore-drill:
+    name: Backup & restore drill (U9)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fileconverter
+          POSTGRES_USER: fileconverter
+          POSTGRES_PASSWORD: fileconverter
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fileconverter"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: ci-test-secret-key
+      DATABASE_URL: postgres://fileconverter:fileconverter@localhost:5432/fileconverter
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: fileconverter
+      POSTGRES_USER: fileconverter
+      POSTGRES_PASSWORD: fileconverter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      # Use a client matching the server major version (16) to avoid dump/restore
+      # incompatibilities (e.g. newer pg_dump emitting parameters an older server rejects).
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmagic1 postgresql-client-16
+      - run: pip install -r requirements.lock psycopg[binary]
+      - name: Seed a known row
+        run: |
+          python manage.py migrate --noinput
+          python manage.py shell -c "from apps.organizations.models import Organization; Organization.objects.create(name='drill-canary')"
+      - name: Back up
+        run: BACKUP_DIR=./backups sh scripts/backup.sh
+      - name: Destroy and restore
+        run: |
+          python manage.py shell -c "from apps.organizations.models import Organization; Organization.objects.all().delete()"
+          DUMP=$(ls -t backups/db-*.dump | head -1)
+          CONFIRM=yes sh scripts/restore.sh "$DUMP"
+      - name: Verify the canary survived the restore
+        run: |
+          python manage.py shell -c "from apps.organizations.models import Organization; assert Organization.objects.filter(name='drill-canary').exists(), 'restore lost data'; print('restore verified')"
+
+  load-smoke:
+    name: Core path load smoke (k6, GROWTH2)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fileconverter
+          POSTGRES_USER: fileconverter
+          POSTGRES_PASSWORD: fileconverter
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fileconverter"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: ci-load-smoke-key
+      CELERY_TASK_ALWAYS_EAGER: "True"
+      DATABASE_URL: postgres://fileconverter:fileconverter@localhost:5432/fileconverter
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: fileconverter
+      POSTGRES_USER: fileconverter
+      POSTGRES_PASSWORD: fileconverter
+      REDIS_URL: redis://localhost:6379/0
+      FILECONVERTER_USE_REDIS_CACHE: "True"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install system libs (libmagic)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmagic1
+      - name: Install dependencies (locked)
+        run: pip install -r requirements.lock psycopg[binary]
+      - name: Install k6
+        run: |
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+      - name: Migrate and seed demo user
+        run: |
+          python manage.py migrate --noinput
+          python manage.py bootstrap_demo --username demo --password demo12345
+      - name: Start web server
+        run: |
+          gunicorn fileconverter.wsgi:application --bind 127.0.0.1:8000 --daemon
+          for i in $(seq 1 30); do
+            if python scripts/check_readiness.py http://127.0.0.1:8000 --health-only; then exit 0; fi
+            sleep 2
+          done
+          echo "server failed to become healthy" >&2
+          exit 1
+      - name: Run k6 smoke (SLO thresholds)
+        run: |
+          k6 run \
+            -e BASE_URL=http://127.0.0.1:8000 \
+            -e USER=demo -e PASS=demo12345 \
+            -e VUS=3 -e DURATION=30s \
+            loadtest/k6-convert.js
+      - name: Readiness probe (allow CI superuser RLS degraded)
+        run: python scripts/check_readiness.py http://127.0.0.1:8000 --allow-rls-degraded
